@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
 import { motion } from "motion/react";
 import { FolderOpen, ArrowRight, Warning } from "@phosphor-icons/react";
 
@@ -9,6 +10,14 @@ interface Props {
 export function SetupView({ onOpen }: Props) {
   const [path, setPath] = useState("");
   const [error, setError] = useState("");
+
+  const handleBrowse = async () => {
+    const selected = await open({ directory: true, multiple: false });
+    if (typeof selected === "string") {
+      setPath(selected);
+      setError("");
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,25 +54,35 @@ export function SetupView({ onOpen }: Props) {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Input */}
-          <div className="relative">
-            <FolderOpen
-              size={12}
-              weight="fill"
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
-            />
-            <input
-              type="text"
-              value={path}
-              onChange={(e) => {
-                setPath(e.target.value);
-                if (error) setError("");
-              }}
-              placeholder="C:\Projects\MyApp"
-              className="w-full bg-zinc-800/60 border border-zinc-700/60 rounded text-[11px] text-zinc-200 font-mono placeholder-zinc-600 py-2.5 pl-8 pr-3 focus:outline-none focus:border-blue-500/60 focus:bg-zinc-800 transition-colors"
-              spellCheck={false}
-              autoComplete="off"
-            />
+          {/* Input + browse */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <FolderOpen
+                size={12}
+                weight="fill"
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none"
+              />
+              <input
+                type="text"
+                value={path}
+                onChange={(e) => {
+                  setPath(e.target.value);
+                  if (error) setError("");
+                }}
+                placeholder="C:\Projects\MyApp"
+                className="w-full bg-zinc-800/60 border border-zinc-700/60 rounded text-[11px] text-zinc-200 font-mono placeholder-zinc-600 py-2.5 pl-8 pr-3 focus:outline-none focus:border-blue-500/60 focus:bg-zinc-800 transition-colors"
+                spellCheck={false}
+                autoComplete="off"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleBrowse}
+              title="Browse folder"
+              className="flex items-center justify-center w-9 bg-zinc-800/60 border border-zinc-700/60 rounded hover:bg-zinc-700/60 hover:border-zinc-600 transition-colors focus:outline-none focus:ring-1 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-zinc-900 flex-shrink-0"
+            >
+              <FolderOpen size={13} weight="fill" className="text-zinc-400" />
+            </button>
           </div>
 
           {/* Error */}

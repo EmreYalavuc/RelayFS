@@ -14,6 +14,9 @@ pub fn run() {
             commands::start_watching,
             commands::stop_watching,
             commands::get_project_info,
+            commands::list_project_files,
+            commands::read_file,
+            commands::write_file_atomic,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
