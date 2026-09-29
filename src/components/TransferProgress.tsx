@@ -12,31 +12,25 @@ export function TransferProgress() {
     <motion.div
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: "auto" }}
-      className="mt-4 pt-4 border-t border-white/[0.05]"
+      className="mt-4 pt-4 border-t border-[rgba(84,84,88,0.35)]"
     >
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-2.5">
         <div className="flex items-center gap-2">
-          <span className={`w-[6px] h-[6px] rounded-full flex-shrink-0 ${
-            finished
-              ? "bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
-              : "bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.8)]"
+          <span className={`w-[7px] h-[7px] rounded-full flex-shrink-0 ${
+            finished ? "bg-[#30d158]" : "bg-[#0a84ff]"
           }`} />
-          <span className="text-[10px] font-sans font-medium text-zinc-500">
-            {finished ? "transfer complete" : "receiving files"}
+          <span className="text-[12px] font-medium text-[rgba(235,235,245,0.5)]">
+            {finished ? "Transfer complete" : "Receiving files"}
           </span>
         </div>
-        <span className="text-[10px] font-mono tabular-nums tracking-tight text-zinc-500">
-          {done}<span className="text-zinc-700">/{total}</span>
+        <span className="text-[12px] font-mono tabular-nums text-[rgba(235,235,245,0.45)]">
+          {done}<span className="text-[rgba(235,235,245,0.25)]">/{total}</span>
         </span>
       </div>
 
-      <div className="h-[2px] bg-white/[0.04] rounded-full overflow-hidden">
+      <div className="h-[3px] bg-[#3a3a3c] rounded-full overflow-hidden">
         <motion.div
-          className={`h-full rounded-full ${
-            finished
-              ? "bg-emerald-400 shadow-[0_0_4px_rgba(52,211,153,0.6)]"
-              : "bg-blue-500 shadow-[0_0_4px_rgba(59,130,246,0.6)]"
-          }`}
+          className={`h-full rounded-full ${finished ? "bg-[#30d158]" : "bg-[#0a84ff]"}`}
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ ease: "easeOut", duration: 0.3 }}

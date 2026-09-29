@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { motion } from "motion/react";
 import { FolderOpen, Copy, Check, SignOut, X } from "@phosphor-icons/react";
+import logoUrl from "../assets/RelayFS.svg";
 import { useSyncStore } from "../store/syncStore";
 import { ConnectionStatus } from "./ConnectionStatus";
 import { SyncButton } from "./SyncButton";
@@ -37,58 +38,59 @@ export function ConnectionPanel({ onSync, onResolveConflict, onDisconnect, onRec
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      initial={{ opacity: 0, y: 10, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      className="w-[380px] bg-[#111113] border border-white/[0.07] rounded-xl shadow-2xl shadow-black/80 overflow-hidden"
+      transition={{ type: "spring", stiffness: 300, damping: 28 }}
+      className="w-[380px] bg-[#1c1c1e] border border-white/[0.08] rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.7)] overflow-hidden"
     >
-      {/* Top bar — drag region */}
+      {/* Title bar — vibrancy */}
       <div
         data-tauri-drag-region
-        className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-[#0D0D0F]/80"
+        className="flex items-center justify-between px-4 py-3 border-b border-[rgba(84,84,88,0.45)] bg-black/50 backdrop-blur-[20px]"
       >
         <ConnectionStatus state={connectionState} />
 
-        <div className="flex items-center gap-1.5" data-tauri-drag-region="false">
+        <div className="flex items-center gap-1" data-tauri-drag-region="false">
           {/* Auto-sync toggle */}
           <button
             onClick={toggleAutoSync}
             title={autoSync ? "Auto-sync ON" : "Auto-sync OFF"}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[9px] font-mono tracking-widest uppercase border transition-all ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
               autoSync
-                ? "text-blue-400 border-blue-500/30 bg-blue-500/[0.08] shadow-[0_0_10px_rgba(59,130,246,0.1)]"
-                : "text-zinc-600 border-white/[0.06] hover:text-zinc-400 hover:border-white/[0.1]"
+                ? "text-[#0a84ff] bg-[#0a84ff]/10 border border-[rgba(10,132,255,0.25)]"
+                : "text-[rgba(235,235,245,0.4)] bg-transparent hover:bg-white/[0.06] border border-transparent"
             }`}
           >
-            <span className={`w-1.5 h-1.5 rounded-full transition-all ${
-              autoSync
-                ? "bg-blue-400 shadow-[0_0_5px_rgba(96,165,250,0.9)]"
-                : "bg-zinc-600"
+            <span className={`w-1.5 h-1.5 rounded-full transition-colors ${
+              autoSync ? "bg-[#0a84ff]" : "bg-[#636366]"
             }`} />
-            {autoSync ? "auto" : "manual"}
+            Auto
           </button>
 
-          {/* Branding */}
-          <span className="text-[9px] font-mono tracking-widest text-zinc-700 px-1.5">
-            relay<span className="text-blue-500/70">fs</span>
-          </span>
+          {/* Logo */}
+          <img
+            src={logoUrl}
+            alt="RelayFS"
+            className="h-5 w-auto opacity-30 mx-1"
+            draggable={false}
+          />
 
           {/* Disconnect */}
           <button
             onClick={onDisconnect}
             title="Disconnect"
-            className="w-6 h-6 flex items-center justify-center rounded-md text-zinc-700 hover:text-zinc-400 hover:bg-white/[0.06] transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-full text-[rgba(235,235,245,0.4)] hover:text-[rgba(235,235,245,0.7)] hover:bg-white/[0.07] transition-all"
           >
-            <SignOut size={11} weight="bold" />
+            <SignOut size={13} weight="bold" />
           </button>
 
           {/* Close */}
           <button
             onClick={() => getCurrentWindow().close()}
             title="Close"
-            className="w-6 h-6 flex items-center justify-center rounded-md text-zinc-700 hover:text-red-400 hover:bg-red-500/[0.08] transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-full text-[rgba(235,235,245,0.4)] hover:text-white hover:bg-[#ff453a] transition-all"
           >
-            <X size={11} weight="bold" />
+            <X size={13} weight="bold" />
           </button>
         </div>
       </div>
@@ -96,9 +98,9 @@ export function ConnectionPanel({ onSync, onResolveConflict, onDisconnect, onRec
       {/* Body */}
       <div className="px-5 py-5">
         {/* Project path */}
-        <div className="flex items-center gap-2 mb-3">
-          <FolderOpen size={11} weight="fill" className="text-zinc-600 flex-shrink-0" />
-          <p className="text-[11px] font-mono text-zinc-400 truncate flex-1 tabular-nums">
+        <div className="flex items-center gap-2 mb-4">
+          <FolderOpen size={13} weight="fill" className="text-[rgba(235,235,245,0.3)] flex-shrink-0" />
+          <p className="text-[12px] font-mono text-[rgba(235,235,245,0.5)] truncate flex-1">
             {project?.path ?? "—"}
           </p>
         </div>
@@ -110,8 +112,8 @@ export function ConnectionPanel({ onSync, onResolveConflict, onDisconnect, onRec
 
         {/* Peers summary */}
         {peers.length > 0 && (
-          <p className="text-[10px] font-sans text-zinc-600 mt-2">
-            <span className="text-emerald-400 font-semibold tabular-nums font-mono">{peers.length}</span>
+          <p className="text-[12px] text-[rgba(235,235,245,0.45)] mt-1">
+            <span className="text-[#30d158] font-semibold tabular-nums">{peers.length}</span>
             {" "}peer{peers.length !== 1 ? "s" : ""} connected
           </p>
         )}
@@ -122,15 +124,15 @@ export function ConnectionPanel({ onSync, onResolveConflict, onDisconnect, onRec
         </div>
 
         {/* Stats */}
-        <div className="flex items-center justify-between pt-4 border-t border-white/[0.05]">
+        <div className="flex items-center justify-between pt-4 border-t border-[rgba(84,84,88,0.35)]">
           <StatItem
-            label="pending"
+            label="Pending"
             value={String(pending)}
             accent={pending > 0}
-            accentColor="text-amber-400"
+            accentColor="text-[#ff9f0a]"
           />
           <StatItem
-            label="last sync"
+            label="Last sync"
             value={lastSyncAt ? formatRelative(lastSyncAt) : "—"}
           />
         </div>
@@ -160,23 +162,23 @@ function RoomCodeBadge({ code }: { code: string }) {
   }, [code]);
 
   return (
-    <div className="flex items-center gap-2 mt-1 mb-1">
-      <div className="flex-1 flex items-center gap-2.5 bg-white/[0.03] border border-white/[0.07] rounded-lg px-3 py-2">
-        <span className="text-[9px] font-sans font-semibold text-zinc-600 uppercase tracking-widest">
-          room
+    <div className="flex items-center gap-2 mb-3">
+      <div className="flex-1 flex items-center gap-3 bg-[#2c2c2e] border border-[rgba(84,84,88,0.5)] rounded-[12px] px-3.5 py-2.5">
+        <span className="text-[10px] font-sans font-semibold text-[rgba(235,235,245,0.3)] uppercase tracking-widest">
+          Room
         </span>
-        <span className="text-[13px] font-mono tracking-[0.22em] font-semibold text-zinc-100">
+        <span className="text-[15px] font-mono tracking-[0.2em] font-semibold text-white">
           {code}
         </span>
       </div>
       <button
         onClick={copy}
         title="Copy room code"
-        className="flex items-center justify-center w-8 h-8 bg-white/[0.03] border border-white/[0.07] rounded-lg hover:bg-white/[0.06] hover:border-white/[0.12] transition-all"
+        className="flex items-center justify-center w-10 h-10 bg-[#2c2c2e] border border-[rgba(84,84,88,0.5)] rounded-[12px] hover:bg-[#3a3a3c] transition-all"
       >
         {copied
-          ? <Check size={11} weight="bold" className="text-emerald-400" />
-          : <Copy size={11} weight="bold" className="text-zinc-500" />}
+          ? <Check size={14} weight="bold" className="text-[#30d158]" />
+          : <Copy size={14} weight="bold" className="text-[rgba(235,235,245,0.45)]" />}
       </button>
     </div>
   );
@@ -191,9 +193,9 @@ function StatItem({
   accentColor?: string;
 }) {
   return (
-    <div className="flex items-center gap-1.5">
-      <span className="text-[10px] font-sans text-zinc-600">{label}</span>
-      <span className={`text-[10px] font-mono tabular-nums tracking-tight ${accent ? accentColor : "text-zinc-500"}`}>
+    <div className="flex items-center gap-2">
+      <span className="text-[12px] text-[rgba(235,235,245,0.35)]">{label}</span>
+      <span className={`text-[12px] font-mono tabular-nums ${accent ? accentColor : "text-[rgba(235,235,245,0.55)]"}`}>
         {value}
       </span>
     </div>

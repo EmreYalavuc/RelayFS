@@ -4,59 +4,67 @@ import type { ConnectionState } from "../types";
 
 interface StateConfig {
   label: string;
-  dot: string;
-  glow: string;
-  badge: string;
+  color: string;
+  bg: string;
+  border: string;
+  text: string;
   pulse: boolean;
 }
 
+// Apple system colors — dark mode
 const CONFIG: Record<ConnectionState, StateConfig> = {
   offline: {
-    label: "OFFLINE",
-    dot: "bg-zinc-600",
-    glow: "",
-    badge: "text-zinc-500 border-zinc-700/50 bg-zinc-800/40",
+    label: "Offline",
+    color: "bg-[#636366]",
+    bg: "bg-[#2c2c2e]",
+    border: "border-[rgba(99,99,102,0.3)]",
+    text: "text-[rgba(235,235,245,0.4)]",
     pulse: false,
   },
   connecting: {
-    label: "CONNECTING",
-    dot: "bg-amber-400",
-    glow: "shadow-[0_0_7px_rgba(251,191,36,0.85)]",
-    badge: "text-amber-400 border-amber-500/30 bg-amber-500/[0.08]",
+    label: "Connecting",
+    color: "bg-[#ff9f0a]",
+    bg: "bg-[#ff9f0a]/10",
+    border: "border-[rgba(255,159,10,0.25)]",
+    text: "text-[#ff9f0a]",
     pulse: true,
   },
   connected: {
-    label: "CONNECTED",
-    dot: "bg-emerald-400",
-    glow: "shadow-[0_0_7px_rgba(52,211,153,0.85)]",
-    badge: "text-emerald-400 border-emerald-500/30 bg-emerald-500/[0.08]",
+    label: "Connected",
+    color: "bg-[#30d158]",
+    bg: "bg-[#30d158]/10",
+    border: "border-[rgba(48,209,88,0.25)]",
+    text: "text-[#30d158]",
     pulse: false,
   },
   syncing: {
-    label: "SYNCING",
-    dot: "bg-blue-400",
-    glow: "shadow-[0_0_7px_rgba(96,165,250,0.85)]",
-    badge: "text-blue-400 border-blue-500/30 bg-blue-500/[0.08]",
+    label: "Syncing",
+    color: "bg-[#0a84ff]",
+    bg: "bg-[#0a84ff]/10",
+    border: "border-[rgba(10,132,255,0.25)]",
+    text: "text-[#0a84ff]",
     pulse: true,
   },
   converged: {
-    label: "CONVERGED",
-    dot: "bg-emerald-400",
-    glow: "shadow-[0_0_7px_rgba(52,211,153,0.85)]",
-    badge: "text-emerald-400 border-emerald-500/30 bg-emerald-500/[0.08]",
+    label: "Converged",
+    color: "bg-[#30d158]",
+    bg: "bg-[#30d158]/10",
+    border: "border-[rgba(48,209,88,0.25)]",
+    text: "text-[#30d158]",
     pulse: false,
   },
   diverged: {
-    label: "DIVERGED",
-    dot: "bg-red-400",
-    glow: "shadow-[0_0_7px_rgba(248,113,113,0.85)]",
-    badge: "text-red-400 border-red-500/30 bg-red-500/[0.08]",
+    label: "Diverged",
+    color: "bg-[#ff453a]",
+    bg: "bg-[#ff453a]/10",
+    border: "border-[rgba(255,69,58,0.25)]",
+    text: "text-[#ff453a]",
     pulse: true,
   },
 };
 
 export function ConnectionStatus({ state }: { state: ConnectionState }) {
-  const { label, dot, glow, badge, pulse } = CONFIG[state];
+  const { label, color, bg, border, text, pulse } = CONFIG[state];
 
   return (
     <motion.div
@@ -65,16 +73,16 @@ export function ConnectionStatus({ state }: { state: ConnectionState }) {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.2 }}
       className={clsx(
-        "inline-flex items-center gap-2 pl-2 pr-3 py-1 rounded-full border",
-        badge
+        "inline-flex items-center gap-2 pl-2.5 pr-3 py-1.5 rounded-full border",
+        bg, border
       )}
     >
       <motion.span
-        className={clsx("w-[7px] h-[7px] rounded-full flex-shrink-0", dot, glow)}
-        animate={pulse ? { opacity: [1, 0.25, 1] } : { opacity: 1 }}
-        transition={pulse ? { duration: 1.3, repeat: Infinity, ease: "easeInOut" } : {}}
+        className={clsx("w-[7px] h-[7px] rounded-full flex-shrink-0", color)}
+        animate={pulse ? { opacity: [1, 0.3, 1] } : { opacity: 1 }}
+        transition={pulse ? { duration: 1.4, repeat: Infinity, ease: "easeInOut" } : {}}
       />
-      <span className="text-[10px] font-mono font-semibold tracking-[0.12em]">
+      <span className={clsx("text-[11px] font-medium tracking-normal", text)}>
         {label}
       </span>
     </motion.div>

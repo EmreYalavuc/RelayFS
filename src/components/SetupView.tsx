@@ -10,6 +10,7 @@ import {
   ClockCounterClockwise,
   X,
 } from "@phosphor-icons/react";
+import logoUrl from "../assets/RelayFS.svg";
 import { formatCode } from "../utils/roomCode";
 import type { SavedSession } from "../types";
 
@@ -60,7 +61,7 @@ export function SetupView({ onHost, onJoin }: Props) {
   const handleHostSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const t = path.trim();
-    if (!t) { setError("project folder required"); return; }
+    if (!t) { setError("Project folder is required"); return; }
     setError("");
     onHost(t);
   };
@@ -68,9 +69,9 @@ export function SetupView({ onHost, onJoin }: Props) {
   const handleJoinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const c = code.replace(/\s/g, "").toUpperCase();
-    if (c.replace("-", "").length < 8) { setError("enter a valid 8-char code"); return; }
+    if (c.replace("-", "").length < 8) { setError("Enter a valid 8-character code"); return; }
     const d = destPath.trim();
-    if (!d) { setError("destination folder required"); return; }
+    if (!d) { setError("Destination folder is required"); return; }
     setError("");
     onJoin(c, d);
   };
@@ -83,33 +84,34 @@ export function SetupView({ onHost, onJoin }: Props) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+      initial={{ opacity: 0, y: 10, scale: 0.97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: 0.2, ease: "easeOut" }}
-      className="w-[380px] bg-[#111113] border border-white/[0.07] rounded-xl shadow-2xl shadow-black/80 overflow-hidden"
+      transition={{ type: "spring", stiffness: 300, damping: 28 }}
+      className="w-[380px] bg-[#1c1c1e] border border-white/[0.08] rounded-[20px] shadow-[0_20px_60px_rgba(0,0,0,0.7)] overflow-hidden"
     >
-      {/* Top bar — drag region */}
+      {/* Title bar — vibrancy */}
       <div
         data-tauri-drag-region
-        className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06] bg-[#0D0D0F]/80"
+        className="flex items-center justify-between px-4 py-3 border-b border-[rgba(84,84,88,0.45)] bg-black/50 backdrop-blur-[20px]"
       >
-        <div className="flex items-center gap-2" data-tauri-drag-region="false">
-          <span className="text-[10px] font-mono tracking-[0.18em] text-zinc-500 uppercase">
-            relay<span className="text-blue-500/80">fs</span>
-          </span>
-          <span className="text-[9px] font-mono text-zinc-700">v0.1.0</span>
-        </div>
+        <img
+          src={logoUrl}
+          alt="RelayFS"
+          className="h-7 w-auto"
+          draggable={false}
+          data-tauri-drag-region="false"
+        />
 
-        <div className="flex items-center gap-1.5" data-tauri-drag-region="false">
-          <span className="text-[9px] font-mono text-zinc-700 tracking-wide">
+        <div className="flex items-center gap-3" data-tauri-drag-region="false">
+          <span className="text-[11px] font-mono text-[rgba(235,235,245,0.25)] tracking-wide">
             CRDT · P2P
           </span>
           <button
             onClick={() => getCurrentWindow().close()}
             title="Close"
-            className="w-6 h-6 flex items-center justify-center rounded-md text-zinc-700 hover:text-red-400 hover:bg-red-500/[0.08] transition-colors"
+            className="w-7 h-7 flex items-center justify-center rounded-full text-[rgba(235,235,245,0.4)] hover:text-white hover:bg-[#ff453a] transition-all"
           >
-            <X size={11} weight="bold" />
+            <X size={13} weight="bold" />
           </button>
         </div>
       </div>
@@ -121,27 +123,27 @@ export function SetupView({ onHost, onJoin }: Props) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="border-b border-white/[0.06] bg-white/[0.01]"
+            className="border-b border-[rgba(84,84,88,0.35)]"
           >
-            <div className="px-4 py-3 flex items-center gap-3">
-              <ClockCounterClockwise size={13} weight="bold" className="text-zinc-600 flex-shrink-0" />
+            <div className="px-4 py-3 flex items-center gap-3 bg-[#2c2c2e]/50">
+              <ClockCounterClockwise size={15} weight="bold" className="text-[rgba(235,235,245,0.3)] flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <p className="text-[9px] font-sans font-semibold text-zinc-600 uppercase tracking-widest mb-0.5">
-                  last session
+                <p className="text-[10px] font-semibold text-[rgba(235,235,245,0.3)] uppercase tracking-widest mb-0.5">
+                  Last Session
                 </p>
-                <p className="text-[11px] font-mono text-zinc-400 truncate">
+                <p className="text-[12px] font-mono text-[rgba(235,235,245,0.6)] truncate">
                   {saved.projectName}
                   {saved.roomCode && (
-                    <span className="text-zinc-700 ml-2 tracking-[0.15em]">{saved.roomCode}</span>
+                    <span className="text-[rgba(235,235,245,0.3)] ml-2 tracking-[0.15em]">{saved.roomCode}</span>
                   )}
                 </p>
               </div>
               <button
                 onClick={handleResume}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-sans font-semibold text-blue-400 border border-blue-500/25 hover:bg-blue-500/[0.08] hover:border-blue-500/40 transition-all flex-shrink-0"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold text-[#0a84ff] bg-[#0a84ff]/10 border border-[rgba(10,132,255,0.25)] hover:bg-[#0a84ff]/20 transition-all flex-shrink-0"
               >
-                resume
-                <ArrowRight size={9} weight="bold" />
+                Resume
+                <ArrowRight size={11} weight="bold" />
               </button>
             </div>
           </motion.div>
@@ -149,15 +151,15 @@ export function SetupView({ onHost, onJoin }: Props) {
       </AnimatePresence>
 
       {/* Tabs */}
-      <div className="flex border-b border-white/[0.06]">
+      <div className="flex border-b border-[rgba(84,84,88,0.35)]">
         {(["host", "join"] as const).map((t) => (
           <button
             key={t}
             onClick={() => { setTab(t); setError(""); }}
-            className={`flex-1 py-2.5 text-[10px] font-sans font-semibold tracking-[0.1em] uppercase transition-all ${
+            className={`flex-1 py-3 text-[13px] font-semibold tracking-normal transition-all ${
               tab === t
-                ? "text-blue-400 border-b-2 border-blue-500 -mb-px bg-blue-500/[0.04]"
-                : "text-zinc-600 hover:text-zinc-400"
+                ? "text-[#0a84ff] border-b-2 border-[#0a84ff] -mb-px bg-[#0a84ff]/[0.05]"
+                : "text-[rgba(235,235,245,0.4)] hover:text-[rgba(235,235,245,0.65)]"
             }`}
           >
             {t === "host" ? "Open Project" : "Join Session"}
@@ -170,14 +172,14 @@ export function SetupView({ onHost, onJoin }: Props) {
           {tab === "host" ? (
             <motion.form
               key="host"
-              initial={{ opacity: 0, x: -8 }}
+              initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 8 }}
+              exit={{ opacity: 0, x: 10 }}
               transition={{ duration: 0.15 }}
               onSubmit={handleHostSubmit}
               className="space-y-3"
             >
-              <p className="text-[11px] font-sans text-zinc-500 mb-4 leading-relaxed">
+              <p className="text-[13px] text-[rgba(235,235,245,0.45)] mb-4 leading-relaxed">
                 Open a local folder. A room code will be generated for teammates to join.
               </p>
               <PathInput
@@ -187,28 +189,28 @@ export function SetupView({ onHost, onJoin }: Props) {
                 onBrowse={() => handleBrowse(setPath)}
               />
               {error && <ErrorLine msg={error} />}
-              <SubmitBtn label="OPEN & HOST" />
+              <SubmitBtn label="Open & Host" />
             </motion.form>
           ) : (
             <motion.form
               key="join"
-              initial={{ opacity: 0, x: 8 }}
+              initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -8 }}
+              exit={{ opacity: 0, x: -10 }}
               transition={{ duration: 0.15 }}
               onSubmit={handleJoinSubmit}
               className="space-y-3"
             >
-              <p className="text-[11px] font-sans text-zinc-500 mb-4 leading-relaxed">
+              <p className="text-[13px] text-[rgba(235,235,245,0.45)] mb-4 leading-relaxed">
                 Enter the room code from your teammate and choose a save location.
               </p>
 
               {/* Room code input */}
               <div className="relative">
                 <LinkSimple
-                  size={11}
+                  size={13}
                   weight="bold"
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none"
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[rgba(235,235,245,0.3)] pointer-events-none"
                 />
                 <input
                   type="text"
@@ -219,7 +221,7 @@ export function SetupView({ onHost, onJoin }: Props) {
                     setError("");
                   }}
                   placeholder="ABCD-EFGH"
-                  className="w-full bg-white/[0.03] border border-white/[0.07] rounded-lg text-[13px] font-mono text-zinc-100 placeholder-zinc-700 py-2.5 pl-8 pr-3 tracking-[0.22em] focus:outline-none focus:border-blue-500/40 focus:bg-blue-500/[0.03] transition-all"
+                  className="w-full bg-[#2c2c2e] border border-[rgba(84,84,88,0.6)] rounded-[10px] text-[16px] font-mono text-white placeholder-[rgba(235,235,245,0.2)] py-2.5 pl-9 pr-3 tracking-[0.22em] focus:outline-none focus:border-[rgba(10,132,255,0.6)] focus:bg-[#2c2c2e] transition-all"
                   spellCheck={false}
                   autoComplete="off"
                 />
@@ -233,7 +235,7 @@ export function SetupView({ onHost, onJoin }: Props) {
               />
 
               {error && <ErrorLine msg={error} />}
-              <SubmitBtn label="JOIN SESSION" />
+              <SubmitBtn label="Join Session" />
             </motion.form>
           )}
         </AnimatePresence>
@@ -256,16 +258,16 @@ function PathInput({
     <div className="flex gap-2">
       <div className="relative flex-1">
         <FolderOpen
-          size={11}
+          size={13}
           weight="fill"
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-600 pointer-events-none"
+          className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[rgba(235,235,245,0.3)] pointer-events-none"
         />
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          className="w-full bg-white/[0.03] border border-white/[0.07] rounded-lg text-[11px] font-mono text-zinc-300 placeholder-zinc-700 py-2.5 pl-8 pr-3 focus:outline-none focus:border-blue-500/40 focus:bg-blue-500/[0.03] transition-all"
+          className="w-full bg-[#2c2c2e] border border-[rgba(84,84,88,0.6)] rounded-[10px] text-[12px] font-mono text-[rgba(235,235,245,0.85)] placeholder-[rgba(235,235,245,0.2)] py-2.5 pl-9 pr-3 focus:outline-none focus:border-[rgba(10,132,255,0.6)] transition-all"
           spellCheck={false}
           autoComplete="off"
         />
@@ -273,9 +275,9 @@ function PathInput({
       <button
         type="button"
         onClick={onBrowse}
-        className="flex items-center justify-center w-9 bg-white/[0.03] border border-white/[0.07] rounded-lg hover:bg-white/[0.06] hover:border-white/[0.12] transition-all focus:outline-none flex-shrink-0"
+        className="flex items-center justify-center w-10 bg-[#2c2c2e] border border-[rgba(84,84,88,0.6)] rounded-[10px] hover:bg-[#3a3a3c] transition-all focus:outline-none flex-shrink-0"
       >
-        <FolderOpen size={12} weight="fill" className="text-zinc-500" />
+        <FolderOpen size={14} weight="fill" className="text-[rgba(235,235,245,0.45)]" />
       </button>
     </div>
   );
@@ -288,8 +290,8 @@ function ErrorLine({ msg }: { msg: string }) {
       animate={{ opacity: 1, height: "auto" }}
       className="flex items-center gap-1.5"
     >
-      <Warning size={10} weight="fill" className="text-red-400" />
-      <span className="text-[10px] font-mono text-red-400">{msg}</span>
+      <Warning size={12} weight="fill" className="text-[#ff453a]" />
+      <span className="text-[12px] text-[#ff453a]">{msg}</span>
     </motion.div>
   );
 }
@@ -298,10 +300,10 @@ function SubmitBtn({ label }: { label: string }) {
   return (
     <button
       type="submit"
-      className="w-full flex items-center justify-center gap-2 py-2.5 bg-blue-600/80 hover:bg-blue-500/80 hover:shadow-[0_0_20px_rgba(59,130,246,0.15)] text-white font-sans font-semibold text-[11px] tracking-[0.12em] rounded-lg transition-all focus:outline-none"
+      className="w-full flex items-center justify-center gap-2 py-3 bg-[#0a84ff] hover:bg-[#1a90ff] active:bg-[#0070d8] text-white font-semibold text-[15px] tracking-[-0.01em] rounded-full shadow-[0_1px_3px_rgba(0,0,0,0.3)] transition-all focus:outline-none mt-1"
     >
       {label}
-      <ArrowRight size={11} weight="bold" />
+      <ArrowRight size={14} weight="bold" />
     </button>
   );
 }

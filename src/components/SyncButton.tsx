@@ -9,12 +9,12 @@ interface Props {
 }
 
 const LABELS: Record<SyncPhase, string> = {
-  idle:       "SYNC & MERGE",
-  syncing:    "SYNCING",
-  exchanging: "EXCHANGING STATE",
-  applying:   "APPLYING UPDATES",
-  converged:  "CONVERGED",
-  error:      "RETRY SYNC",
+  idle:       "Sync & Merge",
+  syncing:    "Syncing…",
+  exchanging: "Exchanging State",
+  applying:   "Applying Updates",
+  converged:  "Up to Date",
+  error:      "Retry Sync",
 };
 
 const busy = (p: SyncPhase) =>
@@ -34,53 +34,44 @@ export function SyncButton({ onClick }: Props) {
       onClick={onClick}
       disabled={isDisabled}
       whileTap={!isDisabled ? { scale: 0.97 } : {}}
+      transition={{ type: "spring", stiffness: 400, damping: 30 }}
       className={clsx(
-        "relative min-w-[210px] h-11 px-8 rounded-lg",
-        "font-mono font-semibold text-[11px] tracking-[0.18em]",
-        "border transition-all duration-300",
-        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent",
-        "overflow-hidden",
+        "min-w-[200px] h-11 px-8 rounded-full",
+        "font-sans font-semibold text-[15px] tracking-[-0.01em]",
+        "transition-all duration-200",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0a84ff] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1c1c1e]",
         {
-          "border-blue-500/40 bg-blue-500/[0.07] text-blue-300 hover:bg-blue-500/[0.12] hover:border-blue-400/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.12)] cursor-pointer":
+          "bg-[#0a84ff] text-white hover:bg-[#1a90ff] active:bg-[#0070d8] shadow-[0_1px_3px_rgba(0,0,0,0.3)] cursor-pointer":
             !isDisabled && !isDone && !isError,
-          "border-red-500/40 bg-red-500/[0.07] text-red-300 hover:bg-red-500/[0.12] cursor-pointer":
+          "bg-[#ff453a] text-white hover:bg-[#ff5e53] cursor-pointer":
             isError,
-          "border-blue-400/20 bg-blue-500/[0.04] text-blue-400/50 cursor-wait":
+          "bg-[#0a84ff]/50 text-white/60 cursor-wait":
             isBusy,
-          "border-emerald-500/40 bg-emerald-500/[0.07] text-emerald-300 shadow-[0_0_20px_rgba(52,211,153,0.08)]":
+          "bg-[#30d158] text-white shadow-[0_1px_3px_rgba(0,0,0,0.3)]":
             isDone,
-          "border-white/[0.06] bg-white/[0.02] text-zinc-600 cursor-not-allowed":
+          "bg-[#3a3a3c] text-[rgba(235,235,245,0.3)] cursor-not-allowed":
             isDisabled && !isBusy,
         }
       )}
     >
-      {/* Sweep line when busy */}
-      {isBusy && (
-        <motion.div
-          className="absolute inset-y-0 left-0 w-[1.5px] bg-blue-400/50 shadow-[0_0_6px_rgba(96,165,250,0.6)]"
-          animate={{ x: ["0px", "210px"] }}
-          transition={{ duration: 1.4, repeat: Infinity, ease: "linear" }}
-        />
-      )}
-
-      <span className="relative flex items-center justify-center gap-2">
+      <span className="flex items-center justify-center gap-2">
         {isBusy && (
           <motion.span
             animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            transition={{ duration: 0.9, repeat: Infinity, ease: "linear" }}
           >
-            <ArrowsClockwise size={12} weight="bold" />
+            <ArrowsClockwise size={15} weight="bold" />
           </motion.span>
         )}
-        {isDone && <CheckCircle size={13} weight="fill" />}
-        {isError && <XCircle size={13} weight="fill" />}
+        {isDone && <CheckCircle size={16} weight="fill" />}
+        {isError && <XCircle size={16} weight="fill" />}
 
         <AnimatePresence mode="wait">
           <motion.span
             key={syncPhase}
-            initial={{ opacity: 0, y: 3 }}
+            initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -3 }}
+            exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.12 }}
           >
             {LABELS[syncPhase]}

@@ -43,26 +43,26 @@ export function ReconnectBanner({ onReconnect }: Props) {
           animate={{ opacity: 1, height: "auto" }}
           exit={{ opacity: 0, height: 0 }}
           transition={{ duration: 0.2 }}
-          className="mt-4 pt-4 border-t border-white/[0.05]"
+          className="mt-4 pt-4 border-t border-[rgba(84,84,88,0.35)]"
         >
-          <div className="flex items-center justify-between gap-3 bg-red-500/[0.05] border border-red-500/[0.12] rounded-lg px-3 py-2.5">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="w-[6px] h-[6px] rounded-full bg-red-400 flex-shrink-0 shadow-[0_0_6px_rgba(248,113,113,0.8)]" />
-              <span className="text-[10px] font-sans text-zinc-400 truncate">
-                peer disconnected
+          <div className="flex items-center justify-between gap-3 bg-[#2c2c2e] border border-[rgba(255,69,58,0.2)] rounded-[10px] px-3.5 py-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-[7px] h-[7px] rounded-full bg-[#ff453a] flex-shrink-0" />
+              <span className="text-[12px] font-medium text-[rgba(235,235,245,0.55)] truncate">
+                Peer disconnected
               </span>
             </div>
 
             <div className="flex items-center gap-2 flex-shrink-0">
-              <span className="text-[11px] font-mono tabular-nums tracking-tight text-zinc-500">
+              <span className="text-[13px] font-mono tabular-nums text-[rgba(235,235,245,0.4)]">
                 {secs}s
               </span>
               <button
                 onClick={handleNow}
-                className="flex items-center gap-1.5 px-2 py-0.5 rounded text-[9px] font-sans font-semibold text-blue-400 border border-blue-500/25 hover:bg-blue-500/[0.08] hover:border-blue-500/40 transition-all"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold text-[#0a84ff] bg-[#0a84ff]/10 hover:bg-[#0a84ff]/20 transition-all"
               >
-                <ArrowsClockwise size={9} weight="bold" />
-                now
+                <ArrowsClockwise size={11} weight="bold" />
+                Now
               </button>
             </div>
           </div>
