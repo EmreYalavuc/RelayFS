@@ -1,3 +1,5 @@
+import { motion } from "motion/react";
+import { User } from "@phosphor-icons/react";
 import type { Peer } from "../types";
 
 interface Props {
@@ -7,19 +9,23 @@ interface Props {
 export function PeerList({ peers }: Props) {
   if (peers.length === 0) return null;
   return (
-    <div className="mt-4 pt-4 border-t border-gray-800">
-      <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">
-        Peers
+    <div className="mt-4 pt-4 border-t border-zinc-800">
+      <p className="text-[9px] text-zinc-600 uppercase tracking-[0.2em] mb-2">
+        peers
       </p>
-      <div className="flex flex-wrap gap-2">
-        {peers.map((peer) => (
-          <div
+      <div className="flex flex-wrap gap-1.5">
+        {peers.map((peer, i) => (
+          <motion.div
             key={peer.id}
-            className="flex items-center gap-1.5 bg-gray-800/70 border border-gray-700 rounded-full px-3 py-1"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: i * 0.05 }}
+            className="flex items-center gap-1.5 bg-zinc-800/60 border border-zinc-700/50 rounded px-2.5 py-1"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span className="text-xs text-gray-300 font-mono">{peer.name}</span>
-          </div>
+            <User size={10} weight="bold" className="text-zinc-500" />
+            <span className="text-[10px] text-zinc-300 font-mono">{peer.name}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-0.5" />
+          </motion.div>
         ))}
       </div>
     </div>

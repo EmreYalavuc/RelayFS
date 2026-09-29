@@ -1,27 +1,55 @@
 import { clsx } from "clsx";
+import {
+  WifiHigh,
+  WifiSlash,
+  WifiMedium,
+  ArrowsClockwise,
+  CheckCircle,
+  WarningCircle,
+} from "@phosphor-icons/react";
+import { motion } from "motion/react";
 import type { ConnectionState } from "../types";
 
 interface Props {
   state: ConnectionState;
 }
 
-const CONFIG: Record<ConnectionState, { label: string; dot: string; text: string }> = {
-  offline:    { label: "OFFLINE",     dot: "bg-gray-600",                   text: "text-gray-500" },
-  connecting: { label: "CONNECTING",  dot: "bg-yellow-400 animate-pulse",   text: "text-yellow-400" },
-  connected:  { label: "CONNECTED",   dot: "bg-emerald-400",                text: "text-emerald-400" },
-  syncing:    { label: "SYNCING",     dot: "bg-blue-400 animate-pulse",     text: "text-blue-400" },
-  converged:  { label: "CONVERGED",   dot: "bg-emerald-400",                text: "text-emerald-400" },
-  diverged:   { label: "DIVERGED",    dot: "bg-red-400 animate-pulse",      text: "text-red-400" },
+const CONFIG: Record<
+  ConnectionState,
+  {
+    label: string;
+    Icon: React.ElementType;
+    color: string;
+    pulse: boolean;
+  }
+> = {
+  offline:    { label: "OFFLINE",    Icon: WifiSlash,        color: "text-zinc-500",   pulse: false },
+  connecting: { label: "CONNECTING", Icon: WifiMedium,       color: "text-yellow-400", pulse: true  },
+  connected:  { label: "CONNECTED",  Icon: WifiHigh,         color: "text-emerald-400",pulse: false },
+  syncing:    { label: "SYNCING",    Icon: ArrowsClockwise,  color: "text-blue-400",   pulse: true  },
+  converged:  { label: "CONVERGED",  Icon: CheckCircle,      color: "text-emerald-400",pulse: false },
+  diverged:   { label: "DIVERGED",   Icon: WarningCircle,    color: "text-red-400",    pulse: true  },
 };
 
 export function ConnectionStatus({ state }: Props) {
-  const { label, dot, text } = CONFIG[state];
+  const { label, Icon, color, pulse } = CONFIG[state];
   return (
-    <div className="flex items-center gap-2">
-      <span className={clsx("w-2 h-2 rounded-full flex-shrink-0", dot)} />
-      <span className={clsx("text-xs font-mono font-bold tracking-[0.2em]", text)}>
+    <motion.div
+      className="flex items-center gap-2"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      key={state}
+      transition={{ duration: 0.2 }}
+    >
+      <motion.div
+        animate={pulse ? { opacity: [1, 0.4, 1] } : { opacity: 1 }}
+        transition={pulse ? { duration: 1.2, repeat: Infinity } : {}}
+      >
+        <Icon weight="fill" size={14} className={color} />
+      </motion.div>
+      <span className={clsx("text-[11px] font-mono tracking-[0.2em] font-semibold", color)}>
         {label}
       </span>
-    </div>
+    </motion.div>
   );
 }

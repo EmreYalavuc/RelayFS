@@ -1,1 +1,20 @@
 @import "tailwindcss";
+
+@theme {
+  --font-mono: "JetBrains Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
+}
+
+@layer base {
+  * {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  html {
+    font-family: var(--font-mono);
+  }
+
+  /* Prevent text selection on UI chrome */
+  [data-no-select] {
+    user-select: none;
+  }
+}
