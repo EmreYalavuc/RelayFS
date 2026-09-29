@@ -38,3 +38,10 @@ export interface TransferState {
   done: number;
   total: number;
 }
+
+export interface SavedSession {
+  projectPath: string;
+  projectName: string;
+  roomCode: string | null;
+  appMode: "host" | "guest";
+}

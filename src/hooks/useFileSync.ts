@@ -15,28 +15,31 @@ function isText(path: string) {
   return TEXT_EXT.has(path.split(".").pop()?.toLowerCase() ?? "");
 }
 
-// Forward slashes, strip leading slash
 function rel(absPath: string, root: string) {
   return absPath.replace(/\\/g, "/").replace(root.replace(/\\/g, "/") + "/", "");
 }
 
-// Y.Text replace: delete-all + insert preserves CRDT history object
 function replaceText(yt: Y.Text, content: string) {
-  if (yt.toString() === content) return; // no-op
+  if (yt.toString() === content) return;
   yt.delete(0, yt.length);
   yt.insert(0, content);
 }
 
-const LOCAL_ORIGIN = "local-disk";
+export const LOCAL_ORIGIN = "local-disk";
 
 export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
-  // Paths we are currently writing to disk — ignore their watcher events
-  const writing = useRef(new Set<string>());
-  const setLastSync  = useSyncStore((s) => s.setLastSync);
-  const setTransfer  = useSyncStore((s) => s.setTransfer);
-  const writtenCount = useRef(0);
+  const writing          = useRef(new Set<string>());
+  const recentLocalMods  = useRef(new Set<string>());
+  // Cache the last content we pushed locally so "Keep Mine" can restore it
+  const localContentCache = useRef(new Map<string, string>());
 
-  // ── Step 1: Load all text files into Yjs on project open ──────────────────
+  const setLastSync   = useSyncStore((s) => s.setLastSync);
+  const setTransfer   = useSyncStore((s) => s.setTransfer);
+  const addConflict   = useSyncStore((s) => s.addConflict);
+  const clearConflict = useSyncStore((s) => s.clearConflict);
+  const writtenCount  = useRef(0);
+
+  // ── Step 1: Load all text files into Yjs on project open ─────────────────
   useEffect(() => {
     if (!doc || !projectPath) return;
     let alive = true;
@@ -46,7 +49,6 @@ export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
       const fileMap  = doc.getMap<Y.Text>("files");
       const meta     = doc.getMap<number>("meta");
 
-      // Broadcast total so guests can show progress
       doc.transact(() => {
         meta.set("totalFiles", relPaths.length);
       }, LOCAL_ORIGIN);
@@ -68,7 +70,7 @@ export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
     return () => { alive = false; };
   }, [doc, projectPath]);
 
-  // ── Step 2: Remote Yjs changes → write to disk ────────────────────────────
+  // ── Step 2: Remote Yjs changes → write to disk ───────────────────────────
   useEffect(() => {
     if (!doc || !projectPath) return;
 
@@ -78,17 +80,31 @@ export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
       event: Y.YMapEvent<Y.Text>,
       transaction: Y.Transaction
     ) => {
-      // Skip changes we initiated ourselves from disk
       if (transaction.origin === LOCAL_ORIGIN) return;
 
       event.changes.keys.forEach(async (change, rp) => {
-        if (change.action === "delete") return;
+        const abs  = `${projectPath}\\${rp.replace(/\//g, "\\")}`;
+        const norm = abs.replace(/\\/g, "/");
+
+        // Remote file deletion → remove from disk
+        if (change.action === "delete") {
+          writing.current.add(norm);
+          try {
+            await invoke("delete_file", { path: abs });
+          } catch { /* already gone */ }
+          finally {
+            setTimeout(() => writing.current.delete(norm), 800);
+          }
+          return;
+        }
 
         const yt = fileMap.get(rp);
         if (!yt) return;
 
-        const abs = `${projectPath}\\${rp.replace(/\//g, "\\")}`;
-        const norm = abs.replace(/\\/g, "/");
+        // Detect simultaneous local+remote edit
+        if (recentLocalMods.current.has(rp)) {
+          addConflict(rp);
+        }
 
         writing.current.add(norm);
         try {
@@ -100,7 +116,6 @@ export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
         } catch (e) {
           console.error("[relayfs] write failed", rp, e);
         } finally {
-          // Hold in set long enough to absorb the watcher bounce
           setTimeout(() => writing.current.delete(norm), 800);
         }
       });
@@ -110,31 +125,34 @@ export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
     return () => fileMap.unobserve(observer);
   }, [doc, projectPath]);
 
-  // ── Step 3: Local disk change → update Yjs (called by useWatcher) ────────
+  // ── Step 3: Local disk change → update Yjs ───────────────────────────────
   const handleFileChange = useCallback(
     (absPath: string) => {
       if (!doc || !projectPath) return;
       if (!isText(absPath)) return;
 
       const norm = absPath.replace(/\\/g, "/");
-      if (writing.current.has(norm)) return; // our own write, ignore
+      if (writing.current.has(norm)) return;
 
       const rp = rel(absPath, projectPath);
 
       invoke<string>("read_file", { path: absPath })
         .then((content) => {
+          // Cache local version so conflict resolution can restore it
+          localContentCache.current.set(rp, content);
+
+          // Mark as recently modified locally (5s window)
+          recentLocalMods.current.add(rp);
+          setTimeout(() => recentLocalMods.current.delete(rp), 5000);
+
           const fileMap = doc.getMap<Y.Text>("files");
           doc.transact(() => {
-            let yt = fileMap.get(rp);
-            if (!yt) {
-              fileMap.set(rp, new Y.Text(content));
-            } else {
-              replaceText(yt, content);
-            }
+            const yt = fileMap.get(rp);
+            if (!yt) fileMap.set(rp, new Y.Text(content));
+            else replaceText(yt, content);
           }, LOCAL_ORIGIN);
         })
         .catch(() => {
-          // File deleted — remove from map
           doc.transact(() => {
             doc.getMap<Y.Text>("files").delete(rp);
           }, LOCAL_ORIGIN);
@@ -143,11 +161,40 @@ export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
     [doc, projectPath]
   );
 
-  // Expose pending count from the Yjs map size (rough indicator)
+  // ── Conflict resolution ───────────────────────────────────────────────────
+  const resolveConflict = useCallback(
+    async (rp: string, strategy: "accept" | "keep-mine") => {
+      clearConflict(rp);
+
+      if (strategy === "keep-mine" && doc && projectPath) {
+        const saved = localContentCache.current.get(rp);
+        if (saved != null) {
+          const abs  = `${projectPath}\\${rp.replace(/\//g, "\\")}`;
+          const norm = abs.replace(/\\/g, "/");
+          writing.current.add(norm);
+          try {
+            await invoke("write_file_atomic", { path: abs, content: saved });
+            doc.transact(() => {
+              const yt = doc.getMap<Y.Text>("files").get(rp);
+              if (yt) replaceText(yt, saved);
+            }, LOCAL_ORIGIN);
+          } catch (e) {
+            console.error("[relayfs] revert failed", rp, e);
+          } finally {
+            setTimeout(() => writing.current.delete(norm), 800);
+          }
+        }
+      }
+
+      localContentCache.current.delete(rp);
+    },
+    [doc, projectPath, clearConflict]
+  );
+
   const getPendingCount = useCallback(() => {
     if (!doc) return 0;
     return doc.getMap<Y.Text>("files").size;
   }, [doc]);
 
-  return { handleFileChange, getPendingCount };
+  return { handleFileChange, resolveConflict, getPendingCount };
 }

@@ -19,6 +19,9 @@ interface SyncStore {
   roomId: string | null;
   roomCode: string | null;
   transfer: TransferState;
+  autoSync: boolean;
+  conflictFiles: string[];
+  reconnectAt: number | null;
 
   setAppMode: (mode: AppMode) => void;
   setConnectionState: (state: ConnectionState) => void;
@@ -32,6 +35,10 @@ interface SyncStore {
   setRoomId: (id: string | null) => void;
   setRoomCode: (code: string | null) => void;
   setTransfer: (done: number, total: number) => void;
+  toggleAutoSync: () => void;
+  addConflict: (rp: string) => void;
+  clearConflict: (rp: string) => void;
+  setReconnectAt: (t: number | null) => void;
   resetSession: () => void;
 }
 
@@ -46,6 +53,9 @@ export const useSyncStore = create<SyncStore>((set) => ({
   roomId: null,
   roomCode: null,
   transfer: { done: 0, total: 0 },
+  autoSync: false,
+  conflictFiles: [],
+  reconnectAt: null,
 
   setAppMode: (appMode) => set({ appMode }),
   setConnectionState: (connectionState) => set({ connectionState }),
@@ -62,6 +72,16 @@ export const useSyncStore = create<SyncStore>((set) => ({
   setRoomId: (roomId) => set({ roomId }),
   setRoomCode: (roomCode) => set({ roomCode }),
   setTransfer: (done, total) => set({ transfer: { done, total } }),
+  toggleAutoSync: () => set((s) => ({ autoSync: !s.autoSync })),
+  addConflict: (rp) =>
+    set((s) => ({
+      conflictFiles: s.conflictFiles.includes(rp)
+        ? s.conflictFiles
+        : [...s.conflictFiles, rp],
+    })),
+  clearConflict: (rp) =>
+    set((s) => ({ conflictFiles: s.conflictFiles.filter((f) => f !== rp) })),
+  setReconnectAt: (reconnectAt) => set({ reconnectAt }),
   resetSession: () =>
     set({
       appMode: "setup",
@@ -74,5 +94,7 @@ export const useSyncStore = create<SyncStore>((set) => ({
       roomId: null,
       roomCode: null,
       transfer: { done: 0, total: 0 },
+      conflictFiles: [],
+      reconnectAt: null,
     }),
 }));

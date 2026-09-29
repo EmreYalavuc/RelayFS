@@ -21,7 +21,7 @@ const busy = (p: SyncPhase) =>
   p === "syncing" || p === "exchanging" || p === "applying";
 
 export function SyncButton({ onClick }: Props) {
-  const syncPhase = useSyncStore((s) => s.syncPhase);
+  const syncPhase       = useSyncStore((s) => s.syncPhase);
   const connectionState = useSyncStore((s) => s.connectionState);
 
   const isBusy     = busy(syncPhase);
@@ -35,21 +35,21 @@ export function SyncButton({ onClick }: Props) {
       disabled={isDisabled}
       whileTap={!isDisabled ? { scale: 0.97 } : {}}
       className={clsx(
-        "relative min-w-[210px] h-12 px-8 rounded-lg",
+        "relative min-w-[210px] h-11 px-8 rounded-lg",
         "font-mono font-semibold text-[11px] tracking-[0.18em]",
-        "border transition-colors duration-300",
-        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-zinc-950",
+        "border transition-all duration-300",
+        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent",
         "overflow-hidden",
         {
-          "border-blue-500/50 bg-blue-500/8 text-blue-300 hover:bg-blue-500/14 hover:border-blue-400/70 cursor-pointer":
+          "border-blue-500/40 bg-blue-500/[0.07] text-blue-300 hover:bg-blue-500/[0.12] hover:border-blue-400/60 hover:shadow-[0_0_20px_rgba(59,130,246,0.12)] cursor-pointer":
             !isDisabled && !isDone && !isError,
-          "border-red-500/50 bg-red-500/8 text-red-300 hover:bg-red-500/14 cursor-pointer":
+          "border-red-500/40 bg-red-500/[0.07] text-red-300 hover:bg-red-500/[0.12] cursor-pointer":
             isError,
-          "border-blue-400/30 bg-blue-500/5 text-blue-400/60 cursor-wait":
+          "border-blue-400/20 bg-blue-500/[0.04] text-blue-400/50 cursor-wait":
             isBusy,
-          "border-emerald-500/50 bg-emerald-500/8 text-emerald-300":
+          "border-emerald-500/40 bg-emerald-500/[0.07] text-emerald-300 shadow-[0_0_20px_rgba(52,211,153,0.08)]":
             isDone,
-          "border-zinc-700/50 bg-zinc-800/30 text-zinc-600 cursor-not-allowed":
+          "border-white/[0.06] bg-white/[0.02] text-zinc-600 cursor-not-allowed":
             isDisabled && !isBusy,
         }
       )}
@@ -57,14 +57,13 @@ export function SyncButton({ onClick }: Props) {
       {/* Sweep line when busy */}
       {isBusy && (
         <motion.div
-          className="absolute inset-y-0 left-0 w-[2px] bg-blue-400/40"
+          className="absolute inset-y-0 left-0 w-[1.5px] bg-blue-400/50 shadow-[0_0_6px_rgba(96,165,250,0.6)]"
           animate={{ x: ["0px", "210px"] }}
           transition={{ duration: 1.4, repeat: Infinity, ease: "linear" }}
         />
       )}
 
       <span className="relative flex items-center justify-center gap-2">
-        {/* Leading icon */}
         {isBusy && (
           <motion.span
             animate={{ rotate: 360 }}
@@ -76,7 +75,6 @@ export function SyncButton({ onClick }: Props) {
         {isDone && <CheckCircle size={13} weight="fill" />}
         {isError && <XCircle size={13} weight="fill" />}
 
-        {/* Animated label */}
         <AnimatePresence mode="wait">
           <motion.span
             key={syncPhase}

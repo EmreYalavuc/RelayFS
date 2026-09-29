@@ -7,14 +7,12 @@ use tauri::{AppHandle, State};
 
 pub struct WatcherState(pub Mutex<Option<FileWatcher>>);
 
-// ── directory names to skip during traversal ──────────────────────────────────
 const SKIP_DIRS: &[&str] = &[
     ".git", ".vs", ".vscode", ".idea",
     "node_modules", "target", "dist", ".next", "out", "build",
     "__pycache__", ".venv", "venv", ".cache", ".parcel-cache",
 ];
 
-// ── text file extensions we track ─────────────────────────────────────────────
 const TEXT_EXT: &[&str] = &[
     "ts", "tsx", "js", "jsx", "mjs", "cjs",
     "json", "jsonc",
@@ -29,7 +27,7 @@ const TEXT_EXT: &[&str] = &[
     "sh", "bash",
 ];
 
-const MAX_FILE_BYTES: u64 = 512 * 1024; // 512 KB
+const MAX_FILE_BYTES: u64 = 512 * 1024;
 
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -81,28 +79,69 @@ pub async fn get_project_info(path: String) -> Result<ProjectInfo, String> {
     })
 }
 
-// ── file I/O commands (Phase 2) ───────────────────────────────────────────────
+// ── file I/O commands ─────────────────────────────────────────────────────────
 
-/// Returns all text file relative paths (forward-slash separated) under `root`.
+/// Lists all text files under `root`, respecting `.gitignore` and `.relayfsignore`.
 #[tauri::command]
 pub async fn list_project_files(root: String) -> Result<Vec<String>, String> {
     let root_path = PathBuf::from(&root);
     if !root_path.is_dir() {
         return Err(format!("Not a directory: {root}"));
     }
-    let mut files = Vec::new();
-    collect_text_files(&root_path, &root_path, &mut files);
-    files.sort();
+
+    let files = tokio::task::spawn_blocking(move || -> Vec<String> {
+        let mut results = Vec::new();
+
+        let walker = ignore::WalkBuilder::new(&root_path)
+            .hidden(true)                              // skip dotfiles/dotdirs
+            .git_ignore(true)                          // respect .gitignore
+            .git_global(false)
+            .git_exclude(false)
+            .add_custom_ignore_filename(".relayfsignore")
+            .filter_entry(|e| {
+                if e.depth() == 0 { return true; }
+                let name = e.file_name().to_str().unwrap_or("");
+                !SKIP_DIRS.contains(&name)
+            })
+            .build();
+
+        for entry in walker.filter_map(|e| e.ok()) {
+            let path = entry.path().to_path_buf();
+            if path.is_dir() { continue; }
+
+            if let Ok(meta) = path.metadata() {
+                if meta.len() > MAX_FILE_BYTES { continue; }
+            }
+
+            let ext = path.extension()
+                .and_then(|e| e.to_str())
+                .map(|s| s.to_lowercase())
+                .unwrap_or_default();
+
+            if !TEXT_EXT.contains(&ext.as_str()) { continue; }
+
+            if let Ok(rel) = path.strip_prefix(&root_path) {
+                if let Some(s) = rel.to_str() {
+                    results.push(s.replace('\\', "/"));
+                }
+            }
+        }
+
+        results.sort();
+        results
+    })
+    .await
+    .unwrap_or_default();
+
     Ok(files)
 }
 
-/// Reads a UTF-8 file and returns its content.
 #[tauri::command]
 pub async fn read_file(path: String) -> Result<String, String> {
     std::fs::read_to_string(&path).map_err(|e| format!("read_file({path}): {e}"))
 }
 
-/// Writes content to a temp file then renames (atomic on same filesystem).
+/// Writes content atomically: temp file → rename (same filesystem).
 #[tauri::command]
 pub async fn write_file_atomic(path: String, content: String) -> Result<(), String> {
     let dest = PathBuf::from(&path);
@@ -112,7 +151,6 @@ pub async fn write_file_atomic(path: String, content: String) -> Result<(), Stri
             .map_err(|e| format!("create_dir_all: {e}"))?;
     }
 
-    // Temp file in same directory → same filesystem → rename is atomic
     let nonce = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
@@ -120,9 +158,7 @@ pub async fn write_file_atomic(path: String, content: String) -> Result<(), Stri
     let tmp = dest
         .parent()
         .unwrap_or_else(|| Path::new("."))
-        .join(format!(
-            ".relayfs-{nonce:08x}.tmp"
-        ));
+        .join(format!(".relayfs-{nonce:08x}.tmp"));
 
     std::fs::write(&tmp, content.as_bytes())
         .map_err(|e| format!("write tmp: {e}"))?;
@@ -133,6 +169,17 @@ pub async fn write_file_atomic(path: String, content: String) -> Result<(), Stri
         })?;
 
     Ok(())
+}
+
+/// Deletes a single file from disk (called when a remote peer removes it from Yjs).
+#[tauri::command]
+pub async fn delete_file(path: String) -> Result<(), String> {
+    let p = Path::new(&path);
+    if p.is_file() {
+        std::fs::remove_file(p).map_err(|e| format!("delete_file({path}): {e}"))
+    } else {
+        Ok(()) // already gone — treat as success
+    }
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -155,47 +202,4 @@ fn count_files(dir: &PathBuf) -> usize {
                 .sum()
         })
         .unwrap_or(0)
-}
-
-fn collect_text_files(root: &Path, dir: &Path, out: &mut Vec<String>) {
-    let entries = match std::fs::read_dir(dir) {
-        Ok(e) => e,
-        Err(_) => return,
-    };
-
-    for entry in entries.filter_map(|e| e.ok()) {
-        let path = entry.path();
-        let name = entry.file_name();
-        let name_str = name.to_string_lossy();
-
-        if name_str.starts_with('.') {
-            continue;
-        }
-
-        if path.is_dir() {
-            if !SKIP_DIRS.contains(&name_str.as_ref()) {
-                collect_text_files(root, &path, out);
-            }
-        } else if path.is_file() {
-            if let Ok(meta) = path.metadata() {
-                if meta.len() > MAX_FILE_BYTES {
-                    continue;
-                }
-            }
-
-            let ext = path
-                .extension()
-                .and_then(|e| e.to_str())
-                .map(|s| s.to_lowercase())
-                .unwrap_or_default();
-
-            if !TEXT_EXT.contains(&ext.as_str()) {
-                continue;
-            }
-
-            if let Ok(rel) = path.strip_prefix(root) {
-                out.push(rel.to_string_lossy().replace('\\', "/"));
-            }
-        }
-    }
 }
