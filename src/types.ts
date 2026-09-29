@@ -14,6 +14,8 @@ export type SyncPhase =
   | "converged"
   | "error";
 
+export type AppMode = "setup" | "host" | "guest";
+
 export interface Peer {
   id: string;
   name: string;
@@ -30,4 +32,9 @@ export interface ProjectInfo {
 export interface FileChangePayload {
   kind: string;
   paths: string[];
+}
+
+export interface TransferState {
+  done: number;
+  total: number;
 }

@@ -32,7 +32,9 @@ const LOCAL_ORIGIN = "local-disk";
 export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
   // Paths we are currently writing to disk — ignore their watcher events
   const writing = useRef(new Set<string>());
-  const setLastSync = useSyncStore((s) => s.setLastSync);
+  const setLastSync  = useSyncStore((s) => s.setLastSync);
+  const setTransfer  = useSyncStore((s) => s.setTransfer);
+  const writtenCount = useRef(0);
 
   // ── Step 1: Load all text files into Yjs on project open ──────────────────
   useEffect(() => {
@@ -41,7 +43,13 @@ export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
 
     (async () => {
       const relPaths = await invoke<string[]>("list_project_files", { root: projectPath });
-      const fileMap = doc.getMap<Y.Text>("files");
+      const fileMap  = doc.getMap<Y.Text>("files");
+      const meta     = doc.getMap<number>("meta");
+
+      // Broadcast total so guests can show progress
+      doc.transact(() => {
+        meta.set("totalFiles", relPaths.length);
+      }, LOCAL_ORIGIN);
 
       for (const rp of relPaths) {
         if (!alive) break;
@@ -85,6 +93,9 @@ export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
         writing.current.add(norm);
         try {
           await invoke("write_file_atomic", { path: abs, content: yt.toString() });
+          writtenCount.current += 1;
+          const total = doc.getMap<number>("meta").get("totalFiles") ?? 0;
+          setTransfer(writtenCount.current, total);
           setLastSync(Date.now());
         } catch (e) {
           console.error("[relayfs] write failed", rp, e);

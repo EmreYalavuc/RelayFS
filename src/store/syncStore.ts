@@ -1,7 +1,15 @@
 import { create } from "zustand";
-import type { ConnectionState, Peer, ProjectInfo, SyncPhase } from "../types";
+import type {
+  AppMode,
+  ConnectionState,
+  Peer,
+  ProjectInfo,
+  SyncPhase,
+  TransferState,
+} from "../types";
 
 interface SyncStore {
+  appMode: AppMode;
   connectionState: ConnectionState;
   syncPhase: SyncPhase;
   peers: Peer[];
@@ -9,7 +17,10 @@ interface SyncStore {
   pendingUpdates: number;
   lastSyncAt: number | null;
   roomId: string | null;
+  roomCode: string | null;
+  transfer: TransferState;
 
+  setAppMode: (mode: AppMode) => void;
   setConnectionState: (state: ConnectionState) => void;
   setSyncPhase: (phase: SyncPhase) => void;
   addPeer: (peer: Peer) => void;
@@ -19,9 +30,13 @@ interface SyncStore {
   clearPending: () => void;
   setLastSync: (time: number) => void;
   setRoomId: (id: string | null) => void;
+  setRoomCode: (code: string | null) => void;
+  setTransfer: (done: number, total: number) => void;
+  resetSession: () => void;
 }
 
 export const useSyncStore = create<SyncStore>((set) => ({
+  appMode: "setup",
   connectionState: "offline",
   syncPhase: "idle",
   peers: [],
@@ -29,7 +44,10 @@ export const useSyncStore = create<SyncStore>((set) => ({
   pendingUpdates: 0,
   lastSyncAt: null,
   roomId: null,
+  roomCode: null,
+  transfer: { done: 0, total: 0 },
 
+  setAppMode: (appMode) => set({ appMode }),
   setConnectionState: (connectionState) => set({ connectionState }),
   setSyncPhase: (syncPhase) => set({ syncPhase }),
   addPeer: (peer) =>
@@ -42,4 +60,19 @@ export const useSyncStore = create<SyncStore>((set) => ({
   clearPending: () => set({ pendingUpdates: 0 }),
   setLastSync: (lastSyncAt) => set({ lastSyncAt }),
   setRoomId: (roomId) => set({ roomId }),
+  setRoomCode: (roomCode) => set({ roomCode }),
+  setTransfer: (done, total) => set({ transfer: { done, total } }),
+  resetSession: () =>
+    set({
+      appMode: "setup",
+      connectionState: "offline",
+      syncPhase: "idle",
+      peers: [],
+      project: null,
+      pendingUpdates: 0,
+      lastSyncAt: null,
+      roomId: null,
+      roomCode: null,
+      transfer: { done: 0, total: 0 },
+    }),
 }));
