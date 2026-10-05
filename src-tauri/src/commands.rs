@@ -182,6 +182,24 @@ pub async fn delete_file(path: String) -> Result<(), String> {
     }
 }
 
+/// Opens a folder in the system file explorer (Windows Explorer).
+#[tauri::command]
+pub async fn reveal_in_explorer(path: String) -> Result<(), String> {
+    let p = PathBuf::from(&path);
+    let target = if p.is_file() {
+        p.parent()
+            .map(|d| d.to_string_lossy().into_owned())
+            .unwrap_or(path)
+    } else {
+        path
+    };
+    std::process::Command::new("explorer")
+        .arg(&target)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("reveal_in_explorer: {e}"))
+}
+
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 fn dir_name(p: &PathBuf) -> String {

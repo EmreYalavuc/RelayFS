@@ -18,6 +18,7 @@ pub fn run() {
             commands::read_file,
             commands::write_file_atomic,
             commands::delete_file,
+            commands::reveal_in_explorer,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

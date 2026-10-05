@@ -25,18 +25,30 @@ function replaceText(yt: Y.Text, content: string) {
   yt.insert(0, content);
 }
 
+// FNV-1a 32-bit hash — fast, good enough for integrity checking
+function fnv1a(str: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
+
+interface FileMeta { size: number; hash: string; }
+
 export const LOCAL_ORIGIN = "local-disk";
 
 export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
   const writing          = useRef(new Set<string>());
   const recentLocalMods  = useRef(new Set<string>());
-  // Cache the last content we pushed locally so "Keep Mine" can restore it
   const localContentCache = useRef(new Map<string, string>());
 
   const setLastSync   = useSyncStore((s) => s.setLastSync);
   const setTransfer   = useSyncStore((s) => s.setTransfer);
   const addConflict   = useSyncStore((s) => s.addConflict);
   const clearConflict = useSyncStore((s) => s.clearConflict);
+  const addActivity   = useSyncStore((s) => s.addActivity);
   const writtenCount  = useRef(0);
 
   // ── Step 1: Load all text files into Yjs on project open ─────────────────
@@ -47,6 +59,7 @@ export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
     (async () => {
       const relPaths = await invoke<string[]>("list_project_files", { root: projectPath });
       const fileMap  = doc.getMap<Y.Text>("files");
+      const metaMap  = doc.getMap<string>("file-meta");
       const meta     = doc.getMap<number>("meta");
 
       doc.transact(() => {
@@ -59,8 +72,10 @@ export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
         try {
           const content = await invoke<string>("read_file", { path: abs });
           if (!fileMap.has(rp)) {
+            const fm: FileMeta = { size: content.length, hash: fnv1a(content) };
             doc.transact(() => {
               fileMap.set(rp, new Y.Text(content));
+              metaMap.set(rp, JSON.stringify(fm));
             }, LOCAL_ORIGIN);
           }
         } catch { /* skip unreadable */ }
@@ -75,6 +90,7 @@ export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
     if (!doc || !projectPath) return;
 
     const fileMap = doc.getMap<Y.Text>("files");
+    const metaMap = doc.getMap<string>("file-meta");
 
     const observer = (
       event: Y.YMapEvent<Y.Text>,
@@ -86,11 +102,11 @@ export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
         const abs  = `${projectPath}\\${rp.replace(/\//g, "\\")}`;
         const norm = abs.replace(/\\/g, "/");
 
-        // Remote file deletion → remove from disk
         if (change.action === "delete") {
           writing.current.add(norm);
           try {
             await invoke("delete_file", { path: abs });
+            addActivity({ type: "deleted", path: rp, side: "remote" });
           } catch { /* already gone */ }
           finally {
             setTimeout(() => writing.current.delete(norm), 800);
@@ -101,20 +117,41 @@ export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
         const yt = fileMap.get(rp);
         if (!yt) return;
 
-        // Detect simultaneous local+remote edit
         if (recentLocalMods.current.has(rp)) {
           addConflict(rp);
+          addActivity({ type: "conflict", path: rp, side: "remote" });
         }
+
+        const content = yt.toString();
+        const size    = content.length;
 
         writing.current.add(norm);
         try {
-          await invoke("write_file_atomic", { path: abs, content: yt.toString() });
+          await invoke("write_file_atomic", { path: abs, content });
           writtenCount.current += 1;
           const total = doc.getMap<number>("meta").get("totalFiles") ?? 0;
           setTransfer(writtenCount.current, total);
           setLastSync(Date.now());
+
+          // Verify: compare received content against stored meta hash
+          const storedRaw = metaMap.get(rp);
+          let verified = false;
+          if (storedRaw) {
+            try {
+              const stored: FileMeta = JSON.parse(storedRaw);
+              verified = stored.hash === fnv1a(content) && stored.size === size;
+            } catch { /* ignore parse error */ }
+          }
+
+          addActivity({
+            type: verified ? "verified" : (change.action === "add" ? "added" : "modified"),
+            path: rp,
+            side: "remote",
+            size,
+          });
         } catch (e) {
           console.error("[relayfs] write failed", rp, e);
+          addActivity({ type: "error", path: rp, side: "remote", size });
         } finally {
           setTimeout(() => writing.current.delete(norm), 800);
         }
@@ -138,27 +175,37 @@ export function useFileSync(doc: Y.Doc | null, projectPath: string | null) {
 
       invoke<string>("read_file", { path: absPath })
         .then((content) => {
-          // Cache local version so conflict resolution can restore it
           localContentCache.current.set(rp, content);
-
-          // Mark as recently modified locally (5s window)
           recentLocalMods.current.add(rp);
           setTimeout(() => recentLocalMods.current.delete(rp), 5000);
 
           const fileMap = doc.getMap<Y.Text>("files");
+          const metaMap = doc.getMap<string>("file-meta");
+          const isNew   = !fileMap.has(rp);
+          const fm: FileMeta = { size: content.length, hash: fnv1a(content) };
+
           doc.transact(() => {
             const yt = fileMap.get(rp);
             if (!yt) fileMap.set(rp, new Y.Text(content));
             else replaceText(yt, content);
+            metaMap.set(rp, JSON.stringify(fm));
           }, LOCAL_ORIGIN);
+
+          addActivity({
+            type: isNew ? "added" : "modified",
+            path: rp,
+            side: "local",
+            size: content.length,
+          });
         })
         .catch(() => {
           doc.transact(() => {
             doc.getMap<Y.Text>("files").delete(rp);
           }, LOCAL_ORIGIN);
+          addActivity({ type: "deleted", path: rp, side: "local" });
         });
     },
-    [doc, projectPath]
+    [doc, projectPath, addActivity]
   );
 
   // ── Conflict resolution ───────────────────────────────────────────────────

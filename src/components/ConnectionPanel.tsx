@@ -1,7 +1,8 @@
 import { useCallback, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { motion } from "motion/react";
-import { FolderOpen, Copy, Check, SignOut, X } from "@phosphor-icons/react";
+import { FolderOpen, Copy, Check, SignOut, X, ArrowSquareOut } from "@phosphor-icons/react";
 import logoUrl from "../assets/RelayFS.svg";
 import { useSyncStore } from "../store/syncStore";
 import { ConnectionStatus } from "./ConnectionStatus";
@@ -10,6 +11,7 @@ import { PeerList } from "./PeerList";
 import { TransferProgress } from "./TransferProgress";
 import { ConflictPanel } from "./ConflictPanel";
 import { ReconnectBanner } from "./ReconnectBanner";
+import { ActivityTerminal } from "./ActivityTerminal";
 
 interface Props {
   onSync: () => void;
@@ -97,12 +99,21 @@ export function ConnectionPanel({ onSync, onResolveConflict, onDisconnect, onRec
 
       {/* Body */}
       <div className="px-5 py-5">
-        {/* Project path */}
+        {/* Project path + reveal button */}
         <div className="flex items-center gap-2 mb-4">
           <FolderOpen size={13} weight="fill" className="text-[rgba(235,235,245,0.3)] flex-shrink-0" />
           <p className="text-[12px] font-mono text-[rgba(235,235,245,0.5)] truncate flex-1">
             {project?.path ?? "—"}
           </p>
+          {project?.path && (
+            <button
+              onClick={() => invoke("reveal_in_explorer", { path: project.path }).catch(() => {})}
+              title="Explorer'da göster"
+              className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-md text-[rgba(235,235,245,0.3)] hover:text-[rgba(235,235,245,0.7)] hover:bg-white/[0.07] transition-all"
+            >
+              <ArrowSquareOut size={12} weight="bold" />
+            </button>
+          )}
         </div>
 
         {/* Room code (host only) */}
@@ -140,6 +151,7 @@ export function ConnectionPanel({ onSync, onResolveConflict, onDisconnect, onRec
         {appMode === "guest" && <TransferProgress />}
         <ConflictPanel onResolve={onResolveConflict} />
         <ReconnectBanner onReconnect={onReconnect} />
+        <ActivityTerminal />
       </div>
 
       {peers.length > 0 && (

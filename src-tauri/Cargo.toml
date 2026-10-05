@@ -1,6 +1,6 @@
 [package]
 name = "relay-fs"
-version = "0.1.0"
+version = "0.1.1"
 description = "RelayFS — offline-first CRDT file collaboration"
 authors = []
 edition = "2021"

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type {
+  ActivityEntry,
   AppMode,
   ConnectionState,
   Peer,
@@ -22,6 +23,7 @@ interface SyncStore {
   autoSync: boolean;
   conflictFiles: string[];
   reconnectAt: number | null;
+  activityLog: ActivityEntry[];
 
   setAppMode: (mode: AppMode) => void;
   setConnectionState: (state: ConnectionState) => void;
@@ -39,6 +41,8 @@ interface SyncStore {
   addConflict: (rp: string) => void;
   clearConflict: (rp: string) => void;
   setReconnectAt: (t: number | null) => void;
+  addActivity: (entry: Omit<ActivityEntry, "id" | "ts">) => void;
+  clearActivity: () => void;
   resetSession: () => void;
 }
 
@@ -56,6 +60,7 @@ export const useSyncStore = create<SyncStore>((set) => ({
   autoSync: false,
   conflictFiles: [],
   reconnectAt: null,
+  activityLog: [],
 
   setAppMode: (appMode) => set({ appMode }),
   setConnectionState: (connectionState) => set({ connectionState }),
@@ -82,6 +87,16 @@ export const useSyncStore = create<SyncStore>((set) => ({
   clearConflict: (rp) =>
     set((s) => ({ conflictFiles: s.conflictFiles.filter((f) => f !== rp) })),
   setReconnectAt: (reconnectAt) => set({ reconnectAt }),
+  addActivity: (entry) =>
+    set((s) => {
+      const full: ActivityEntry = {
+        ...entry,
+        id: Math.random().toString(36).slice(2, 9),
+        ts: Date.now(),
+      };
+      return { activityLog: [full, ...s.activityLog].slice(0, 400) };
+    }),
+  clearActivity: () => set({ activityLog: [] }),
   resetSession: () =>
     set({
       appMode: "setup",
@@ -96,5 +111,10 @@ export const useSyncStore = create<SyncStore>((set) => ({
       transfer: { done: 0, total: 0 },
       conflictFiles: [],
       reconnectAt: null,
+      activityLog: [],
     }),
 }));
+
+if (import.meta.env.DEV) {
+  (window as unknown as Record<string, unknown>).__RELAYFS_STORE__ = useSyncStore;
+}
