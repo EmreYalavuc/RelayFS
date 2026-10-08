@@ -14,7 +14,12 @@ export type SyncPhase =
   | "converged"
   | "error";
 
-export type AppMode = "setup" | "host" | "guest";
+export type AppMode = "setup" | "host" | "guest" | "guest-joining";
+
+export interface HostProjectInfo {
+  name: string;
+  fileCount: number;
+}
 
 export interface Peer {
   id: string;
@@ -62,4 +67,8 @@ export interface ActivityEntry {
   path: string;
   side: "local" | "remote";
   size?: number;
+  peerId?: string;    // persistent UUID identifying the originating peer
+  peerName?: string;  // machine hostname
+  peerIp?: string;    // local IP at time of change
+  roomCode?: string;  // room this change happened in
 }

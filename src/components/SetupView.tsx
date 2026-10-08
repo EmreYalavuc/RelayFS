@@ -10,6 +10,7 @@ import {
   ClockCounterClockwise,
   X,
 } from "@phosphor-icons/react";
+// FolderOpen kept for PathInput used in host tab
 import logoUrl from "../assets/RelayFS.svg";
 import { formatCode } from "../utils/roomCode";
 import type { SavedSession } from "../types";
@@ -35,16 +36,15 @@ export function clearSession() {
 
 interface Props {
   onHost: (path: string) => void;
-  onJoin: (code: string, destPath: string) => void;
+  onJoin: (code: string) => void;
 }
 
 export function SetupView({ onHost, onJoin }: Props) {
-  const [tab, setTab]       = useState<"host" | "join">("host");
-  const [path, setPath]     = useState("");
-  const [code, setCode]     = useState("");
-  const [destPath, setDest] = useState("");
-  const [error, setError]   = useState("");
-  const [saved, setSaved]   = useState<SavedSession | null>(null);
+  const [tab, setTab]   = useState<"host" | "join">("host");
+  const [path, setPath] = useState("");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState<SavedSession | null>(null);
 
   useEffect(() => {
     setSaved(loadSavedSession());
@@ -70,16 +70,14 @@ export function SetupView({ onHost, onJoin }: Props) {
     e.preventDefault();
     const c = code.replace(/\s/g, "").toUpperCase();
     if (c.replace("-", "").length < 8) { setError("Enter a valid 8-character code"); return; }
-    const d = destPath.trim();
-    if (!d) { setError("Destination folder is required"); return; }
     setError("");
-    onJoin(c, d);
+    onJoin(c);
   };
 
   const handleResume = () => {
     if (!saved) return;
     if (saved.appMode === "host") onHost(saved.projectPath);
-    else onJoin(saved.roomCode ?? "", saved.projectPath);
+    else onJoin(saved.roomCode ?? "");
   };
 
   return (
@@ -202,7 +200,7 @@ export function SetupView({ onHost, onJoin }: Props) {
               className="space-y-3"
             >
               <p className="text-[13px] text-[rgba(235,235,245,0.45)] mb-4 leading-relaxed">
-                Enter the room code from your teammate and choose a save location.
+                Takımınızdan aldığınız oda kodunu girin. Proje bilgileri odaya bağlandıktan sonra gösterilecek.
               </p>
 
               {/* Room code input */}
@@ -227,15 +225,8 @@ export function SetupView({ onHost, onJoin }: Props) {
                 />
               </div>
 
-              <PathInput
-                value={destPath}
-                onChange={(v) => { setDest(v); setError(""); }}
-                placeholder="C:\Projects\  (save location)"
-                onBrowse={() => handleBrowse(setDest)}
-              />
-
               {error && <ErrorLine msg={error} />}
-              <SubmitBtn label="Join Session" />
+              <SubmitBtn label="Odaya Bağlan" />
             </motion.form>
           )}
         </AnimatePresence>

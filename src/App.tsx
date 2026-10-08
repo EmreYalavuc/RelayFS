@@ -2,6 +2,7 @@ import { useCallback, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ConnectionPanel } from "./components/ConnectionPanel";
 import { SetupView, saveSession, clearSession } from "./components/SetupView";
+import { GuestLobbyView } from "./components/GuestLobbyView";
 import { useYjs } from "./hooks/useYjs";
 import { useFileSync } from "./hooks/useFileSync";
 import { useWatcher } from "./hooks/useWatcher";
@@ -20,9 +21,8 @@ export default function App() {
   const resetSession = useSyncStore((s) => s.resetSession);
 
   const { doc, triggerSync, reconnect } = useYjs(roomId);
-  const { handleFileChange, resolveConflict } = useFileSync(doc, project?.path ?? null);
+  const { handleFileChange, resolveConflict, downloadAllFromYjs } = useFileSync(doc, project?.path ?? null);
 
-  // Debounced auto-sync trigger for watcher events
   const autoSyncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const watcherCallback = useCallback((path: string) => {
@@ -46,38 +46,44 @@ export default function App() {
       setRoomCode(code);
       setRoomId(codeToRoomId(code));
       setAppMode("host");
-
-      saveSession({
-        projectPath: info.path,
-        projectName: info.name,
-        roomCode: code,
-        appMode: "host",
-      });
+      saveSession({ projectPath: info.path, projectName: info.name, roomCode: code, appMode: "host" });
     } catch (err) {
       console.error("Failed to open project:", err);
     }
   }, [setProject, setRoomCode, setRoomId, setAppMode]);
 
-  // Guest: enter room code + pick destination folder
-  const handleJoin = useCallback(async (code: string, destPath: string) => {
-    try {
-      await invoke("start_watching", { path: destPath }).catch(() => {});
-      const projectName = destPath.split(/[\\/]/).pop() ?? "project";
-      setProject({ name: projectName, path: destPath, fileCount: 0 });
-      setRoomCode(null);
-      setRoomId(codeToRoomId(code));
-      setAppMode("guest");
+  // Guest step 1: enter room code → connect immediately, show lobby with folder picker
+  const handleJoin = useCallback((code: string) => {
+    setRoomCode(code);                // save human-readable code for session restore
+    setRoomId(codeToRoomId(code));    // derive roomId for Yjs
+    setAppMode("guest-joining");
+  }, [setRoomCode, setRoomId, setAppMode]);
 
-      saveSession({
-        projectPath: destPath,
-        projectName,
-        roomCode: code,
-        appMode: "guest",
-      });
+  // Guest step 2: folder chosen → move to active guest session
+  const handleGuestSetup = useCallback(async (
+    destPath: string,
+    mode: "existing" | "download",
+  ) => {
+    const savedCode = useSyncStore.getState().roomCode ?? "";
+    try {
+      await invoke("ensure_dir", { path: destPath });
+      const info = await invoke<{ name: string; path: string; file_count: number }>(
+        "start_watching", { path: destPath }
+      );
+      setProject({ name: info.name, path: info.path, fileCount: info.file_count });
+      setAppMode("guest");
+      saveSession({ projectPath: info.path, projectName: info.name, roomCode: savedCode, appMode: "guest" });
+
+      // Download mode: write all Yjs files to the new folder after React re-renders
+      if (mode === "download") {
+        await new Promise<void>((r) => setTimeout(r, 50));
+        await downloadAllFromYjs(info.path);
+      }
     } catch (err) {
-      console.error("Failed to join session:", err);
+      console.error("Failed to setup guest project:", err);
+      throw err;
     }
-  }, [setProject, setRoomCode, setRoomId, setAppMode]);
+  }, [setProject, setAppMode, downloadAllFromYjs]);
 
   const handleDisconnect = useCallback(() => {
     clearSession();
@@ -91,10 +97,17 @@ export default function App() {
     <div className="min-h-screen flex items-center justify-center p-4 select-none">
       {inSession ? (
         <ConnectionPanel
+          doc={doc}
           onSync={triggerSync}
           onResolveConflict={resolveConflict}
           onDisconnect={handleDisconnect}
           onReconnect={reconnect}
+        />
+      ) : appMode === "guest-joining" ? (
+        <GuestLobbyView
+          doc={doc}
+          onSetup={handleGuestSetup}
+          onCancel={handleDisconnect}
         />
       ) : (
         <SetupView onHost={handleHost} onJoin={handleJoin} />

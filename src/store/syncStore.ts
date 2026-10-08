@@ -3,11 +3,18 @@ import type {
   ActivityEntry,
   AppMode,
   ConnectionState,
+  HostProjectInfo,
   Peer,
   ProjectInfo,
   SyncPhase,
   TransferState,
 } from "../types";
+
+export interface PeerInfo {
+  peerId: string;
+  peerName: string;
+  peerIp: string;
+}
 
 interface SyncStore {
   appMode: AppMode;
@@ -24,8 +31,12 @@ interface SyncStore {
   conflictFiles: string[];
   reconnectAt: number | null;
   activityLog: ActivityEntry[];
+  hostProjectInfo: HostProjectInfo | null;
+  localPeerInfo: PeerInfo | null;
 
   setAppMode: (mode: AppMode) => void;
+  setHostProjectInfo: (info: HostProjectInfo | null) => void;
+  setLocalPeerInfo: (info: PeerInfo) => void;
   setConnectionState: (state: ConnectionState) => void;
   setSyncPhase: (phase: SyncPhase) => void;
   addPeer: (peer: Peer) => void;
@@ -42,6 +53,7 @@ interface SyncStore {
   clearConflict: (rp: string) => void;
   setReconnectAt: (t: number | null) => void;
   addActivity: (entry: Omit<ActivityEntry, "id" | "ts">) => void;
+  addActivityEntry: (entry: ActivityEntry) => void;
   clearActivity: () => void;
   resetSession: () => void;
 }
@@ -61,8 +73,12 @@ export const useSyncStore = create<SyncStore>((set) => ({
   conflictFiles: [],
   reconnectAt: null,
   activityLog: [],
+  hostProjectInfo: null,
+  localPeerInfo: null,
 
   setAppMode: (appMode) => set({ appMode }),
+  setHostProjectInfo: (hostProjectInfo) => set({ hostProjectInfo }),
+  setLocalPeerInfo: (localPeerInfo) => set({ localPeerInfo }),
   setConnectionState: (connectionState) => set({ connectionState }),
   setSyncPhase: (syncPhase) => set({ syncPhase }),
   addPeer: (peer) =>
@@ -96,6 +112,11 @@ export const useSyncStore = create<SyncStore>((set) => ({
       };
       return { activityLog: [full, ...s.activityLog].slice(0, 400) };
     }),
+  addActivityEntry: (entry) =>
+    set((s) => {
+      if (s.activityLog.some((e) => e.id === entry.id)) return s;
+      return { activityLog: [entry, ...s.activityLog].slice(0, 400) };
+    }),
   clearActivity: () => set({ activityLog: [] }),
   resetSession: () =>
     set({
@@ -112,6 +133,7 @@ export const useSyncStore = create<SyncStore>((set) => ({
       conflictFiles: [],
       reconnectAt: null,
       activityLog: [],
+      hostProjectInfo: null,
     }),
 }));
 

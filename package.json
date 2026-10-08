@@ -15,10 +15,12 @@
     "@tauri-apps/plugin-dialog": "^2",
     "@tauri-apps/plugin-shell": "^2",
     "clsx": "^2",
+    "highlight.js": "^11.12.0",
     "motion": "^13.4.6",
     "react": "^18",
     "react-dom": "^18",
     "y-webrtc": "^10",
+    "y-websocket": "^3.1.0",
     "yjs": "^13",
     "zustand": "^5"
   },

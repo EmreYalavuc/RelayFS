@@ -182,6 +182,12 @@ pub async fn delete_file(path: String) -> Result<(), String> {
     }
 }
 
+/// Creates a directory (and all parents) if it doesn't already exist.
+#[tauri::command]
+pub async fn ensure_dir(path: String) -> Result<(), String> {
+    std::fs::create_dir_all(&path).map_err(|e| format!("ensure_dir({path}): {e}"))
+}
+
 /// Opens a folder in the system file explorer (Windows Explorer).
 #[tauri::command]
 pub async fn reveal_in_explorer(path: String) -> Result<(), String> {
@@ -198,6 +204,121 @@ pub async fn reveal_in_explorer(path: String) -> Result<(), String> {
         .spawn()
         .map(|_| ())
         .map_err(|e| format!("reveal_in_explorer: {e}"))
+}
+
+// ── peer identity & history ───────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+pub struct LocalInfo {
+    pub hostname: String,
+    pub local_ip: String,
+}
+
+/// Returns the machine's hostname and primary local IP address.
+#[tauri::command]
+pub async fn get_local_info() -> LocalInfo {
+    let hostname = std::env::var("COMPUTERNAME")
+        .or_else(|_| std::env::var("HOSTNAME"))
+        .unwrap_or_else(|_| "unknown".to_string());
+
+    let local_ip = get_primary_ip().unwrap_or_else(|| "unknown".to_string());
+    LocalInfo { hostname, local_ip }
+}
+
+fn get_primary_ip() -> Option<String> {
+    let socket = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
+    socket.connect("8.8.8.8:80").ok()?;
+    socket.local_addr().ok().map(|a| a.ip().to_string())
+}
+
+fn history_path() -> std::path::PathBuf {
+    let base = std::env::var("APPDATA")
+        .or_else(|_| std::env::var("HOME"))
+        .unwrap_or_else(|_| ".".to_string());
+    std::path::PathBuf::from(base).join("RelayFS").join("history.jsonl")
+}
+
+/// Loads all history entries (one JSON string per line) from the persistent log.
+#[tauri::command]
+pub async fn load_history() -> Vec<String> {
+    let path = history_path();
+    if !path.exists() { return Vec::new(); }
+    std::fs::read_to_string(&path)
+        .unwrap_or_default()
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| l.to_string())
+        .collect()
+}
+
+/// Appends a single serialized entry to the persistent history log.
+#[tauri::command]
+pub async fn append_history(entry: String) -> Result<(), String> {
+    let path = history_path();
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    use std::io::Write as _;
+    let mut file = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .map_err(|e| e.to_string())?;
+    writeln!(file, "{}", entry.trim()).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+/// Clears the entire persistent history log.
+#[tauri::command]
+pub async fn clear_history() -> Result<(), String> {
+    let path = history_path();
+    if path.exists() {
+        std::fs::remove_file(&path).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+/// Opens a path in VS Code (requires `code` on PATH).
+#[tauri::command]
+pub async fn open_in_vscode(path: String) -> Result<(), String> {
+    std::process::Command::new("code")
+        .arg(&path)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| format!("VS Code bulunamadı: {e}"))
+}
+
+/// Opens a file with the system default application.
+#[tauri::command]
+pub async fn open_file_default(path: String) -> Result<(), String> {
+    let result = if cfg!(target_os = "windows") {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", "", &path])
+            .spawn()
+    } else if cfg!(target_os = "macos") {
+        std::process::Command::new("open").arg(&path).spawn()
+    } else {
+        std::process::Command::new("xdg-open").arg(&path).spawn()
+    };
+    result.map(|_| ()).map_err(|e| format!("Dosya açılamadı: {e}"))
+}
+
+#[derive(Debug, Serialize)]
+pub struct FileMetaInfo {
+    pub size: u64,
+    pub modified_ms: Option<u64>,
+}
+
+/// Returns size and last-modified timestamp (ms since epoch) for a file path.
+#[tauri::command]
+pub async fn get_file_meta(path: String) -> Result<FileMetaInfo, String> {
+    let meta = std::fs::metadata(&path).map_err(|e| e.to_string())?;
+    let modified_ms = meta
+        .modified()
+        .ok()
+        .and_then(|t| t.duration_since(UNIX_EPOCH).ok())
+        .map(|d| d.as_millis() as u64);
+    Ok(FileMetaInfo { size: meta.len(), modified_ms })
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
